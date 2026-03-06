@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Studio" ADD COLUMN "latitude" DOUBLE PRECISION;
+ALTER TABLE "Studio" ADD COLUMN "longitude" DOUBLE PRECISION;
