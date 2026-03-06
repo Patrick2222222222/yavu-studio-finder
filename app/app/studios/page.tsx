@@ -7,7 +7,8 @@ import { Header } from '@/components/header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Search, MapPin, Phone, Clock, Mail, Globe, Star } from 'lucide-react'
+import { Search, MapPin, Phone, Clock, Mail, Globe, Star, Map, List } from 'lucide-react'
+import { StudioMap } from '@/components/studio-map'
 
 interface Studio {
   id: string
@@ -19,6 +20,8 @@ interface Studio {
   phone?: string
   email?: string
   website?: string
+  latitude?: number
+  longitude?: number
   openingHours?: string | object
 }
 
@@ -26,6 +29,8 @@ export default function StudiosPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [studios, setStudios] = useState<Studio[]>([])
   const [loading, setLoading] = useState(false)
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
+  const [selectedStudio, setSelectedStudio] = useState<Studio | null>(null)
   const [headerRef, headerInView] = useInView({ triggerOnce: true, threshold: 0.1 })
 
   useEffect(() => {
@@ -35,7 +40,7 @@ export default function StudiosPage() {
   const fetchStudios = async (search = '') => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/studios?search=${encodeURIComponent(search)}`)
+      const response = await fetch('/api/studios?search=' + encodeURIComponent(search))
       const data = await response.json()
       setStudios(data)
     } catch (error) {
@@ -50,10 +55,16 @@ export default function StudiosPage() {
     fetchStudios(searchTerm)
   }
 
+  const handleStudioSelect = (studio: Studio) => {
+    setSelectedStudio(studio)
+    const el = document.getElementById('studio-' + studio.id)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       {/* Header Section */}
       <section ref={headerRef} className="pt-24 pb-12 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -67,10 +78,10 @@ export default function StudiosPage() {
               <span className="text-yellow-600">Studios</span> finden
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Entdecken Sie qualifizierte Kosmetikerinnen in Ihrer Nähe, die mit dem 
+              Entdecken Sie qualifizierte Kosmetiker*innen in Ihrer N\u00e4he, die mit dem
               innovativen IRI Filler System arbeiten.
             </p>
-            
+
             {/* Search Form */}
             <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
               <div className="flex gap-4">
@@ -84,9 +95,9 @@ export default function StudiosPage() {
                     className="pl-10 h-12 text-lg"
                   />
                 </div>
-                <Button 
-                  type="submit" 
-                  size="lg" 
+                <Button
+                  type="submit"
+                  size="lg"
                   className="bg-yellow-500 hover:bg-yellow-600 text-black px-8"
                   disabled={loading}
                 >
@@ -99,31 +110,74 @@ export default function StudiosPage() {
         </div>
       </section>
 
-      {/* Studios List */}
-      <section className="py-12">
+      {/* View Toggle & Content */}
+      <section className="py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          {studios.length === 0 && !loading ? (
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-muted-foreground">
+              {studios.length > 0
+                ? studios.length + ' Studio' + (studios.length !== 1 ? 's' : '') + ' gefunden'
+                : 'Alle Studios anzeigen'
+              }
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === 'map' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('map')}
+                className={viewMode === 'map' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : ''}
+              >
+                <Map className="mr-2 h-4 w-4" />
+                Karte
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className={viewMode === 'list' ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : ''}
+              >
+                <List className="mr-2 h-4 w-4" />
+                Liste
+              </Button>
+            </div>
+          </div>
+
+          {/* Map View */}
+          {viewMode === 'map' && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-12"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mb-8"
             >
+              <StudioMap studios={studios} onStudioSelect={handleStudioSelect} />
+            </motion.div>
+          )}
+
+          {/* Studios Grid */}
+          {studios.length === 0 && !loading ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
               <MapPin className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-2xl font-semibold mb-2">Keine Studios gefunden</h3>
-              <p className="text-muted-foreground">
-                Versuchen Sie eine andere Stadt oder Postleitzahl.
-              </p>
+              <p className="text-muted-foreground">Versuchen Sie eine andere Stadt oder Postleitzahl.</p>
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {studios.map((studio: Studio, index: number) => (
                 <motion.div
                   key={studio.id}
+                  id={'studio-' + studio.id}
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  <Card className="h-full hover:shadow-lg transition-all duration-300 hover:scale-105">
+                  <Card className={'h-full transition-all duration-300 hover:scale-105 ' +
+                    (selectedStudio?.id === studio.id
+                      ? 'ring-2 ring-yellow-500 shadow-xl shadow-yellow-100'
+                      : 'hover:shadow-lg')
+                  }>
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
@@ -141,50 +195,41 @@ export default function StudiosPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <CardDescription>{studio.description}</CardDescription>
-                      
                       <div className="space-y-2">
                         <div className="flex items-center text-sm">
                           <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
                           <span>{studio.address}</span>
                         </div>
-                        
                         {studio.phone && (
                           <div className="flex items-center text-sm">
                             <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
                             <span>{studio.phone}</span>
                           </div>
                         )}
-                        
                         {studio.email && (
                           <div className="flex items-center text-sm">
                             <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                             <span>{studio.email}</span>
                           </div>
                         )}
-                        
                         {studio.website && (
                           <div className="flex items-center text-sm">
                             <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
                             <span>{studio.website}</span>
                           </div>
                         )}
-                        
                         {studio.openingHours && (
                           <div className="flex items-start text-sm">
                             <Clock className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
                             <div>
-                              <p className="font-medium">Öffnungszeiten:</p>
+                              <p className="font-medium">\u00d6ffnungszeiten:</p>
                               <p className="text-muted-foreground">
-                                {typeof studio.openingHours === 'string' 
-                                  ? studio.openingHours 
-                                  : 'Nach Vereinbarung'
-                                }
+                                {typeof studio.openingHours === 'string' ? studio.openingHours : 'Nach Vereinbarung'}
                               </p>
                             </div>
                           </div>
                         )}
                       </div>
-                      
                       <div className="pt-4 border-t">
                         <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-black">
                           <Phone className="mr-2 h-4 w-4" />
