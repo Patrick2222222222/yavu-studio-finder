@@ -14,45 +14,24 @@ export async function GET(request: NextRequest) {
           approved: true
         },
         OR: search ? [
-          {
-            city: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          },
-          {
-            postalCode: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          },
-          {
-            name: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
+          { city: { contains: search, mode: 'insensitive' } },
+          { postalCode: { contains: search, mode: 'insensitive' } },
+          { name: { contains: search, mode: 'insensitive' } }
         ] : undefined
       },
-      include: {
-        user: {
-          select: {
-            email: true,
-            approved: true
-          }
-        }
+      select: {
+        id: true, name: true, description: true,
+        address: true, city: true, postalCode: true,
+        phone: true, email: true, website: true,
+        latitude: true, longitude: true, openingHours: true,
+        user: { select: { email: true, approved: true } }
       },
-      orderBy: {
-        name: 'asc'
-      }
+      orderBy: { name: 'asc' }
     })
 
     return NextResponse.json(studios)
   } catch (error) {
     console.error('Error fetching studios:', error)
-    return NextResponse.json(
-      { error: 'Fehler beim Laden der Studios' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Fehler beim Laden der Studios' }, { status: 500 })
   }
 }
